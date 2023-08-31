@@ -12,4 +12,9 @@ OBJECT_PROPERTY = "http://www.w3.org/2002/07/owl#ObjectProperty"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 COMMENT = "http://www.w3.org/2000/01/rdf-schema#comment"
 URI = 'uri'
+ONTOLOGY_SIGNATURE = 'http://erlangen-crm.org/local_schema#signature'
+
+MAIN_RESOURCE = 'http://erlangen-crm.org/mainResource'
+MAIN_PATTERN = 'http://erlangen-crm.org/mainPattern'
+MAIN_ONTOLOGY = 'http://erlangen-crm.org/mainOntology'
 

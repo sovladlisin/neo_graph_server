@@ -82,7 +82,7 @@ class NeoRepo:
 
             if len(labels):
                 t_labels = self.transform_labels(labels)
-                query = 'MATCH (n:{labels}) WHERE NOT n:Ontology OPTIONAL MATCH (n)-[r]-(d) WHERE NOT n:Ontology RETURN n,r,d'.format(labels=t_labels)
+                query = 'MATCH (n:{labels}) WHERE NOT n:Ontology:Resource:Pattern OPTIONAL MATCH (n)-[r]-(d) WHERE NOT n:Ontology:Resource:Pattern RETURN n,r,d'.format(labels=t_labels)
             else:
                 query = 'MATCH (n)-[r]-() RETURN n,r'
 
@@ -147,6 +147,18 @@ class NeoRepo:
             result = session.write_transaction(_service_func, uri)
 
         return result[0] if len(result) > 0 else None
+    
+    def get_nodes_by_uris(self, uris):
+        def _service_func(tx,uris):
+            uris_string = json.dumps(uris)
+            query = "MATCH (n) WHERE n.uri in {uris} RETURN n AS node".format(uris=uris_string)
+            request = tx.run(query)
+            return [self.nodeToDict(record['node']) for record in request]
+
+        with self.driver.session() as session:
+            result = session.write_transaction(_service_func, uris)
+
+        return result
 
     def get_node_with_arcs_by_arcs(self, uri, arcs_labels):
         def _service_func(tx,uri,arcs_labels):
@@ -165,7 +177,6 @@ class NeoRepo:
 
         def _service_func(tx,labels):
             if len(labels):
-                print(labels, '\n\n')
                 t_labels = self.transform_labels(labels)
                 query = 'MATCH (n:{labels}) RETURN n AS node'.format(labels=t_labels)
             else:
@@ -177,7 +188,6 @@ class NeoRepo:
         with self.driver.session() as session:
             result = session.write_transaction(_service_func, labels)
         
-        print(result, '\n\n')
         
         return result
 
@@ -264,6 +274,32 @@ class NeoRepo:
         
         return result
 
+    # Для сбора всех объектов класса с его подклассами
+    def collect_nodes_from_root_uri(self, uri):
+        def _service_func(tx,uri):
+            query = '''
+                    match(n)<-[:`{sub}`*]-(s)<-[:`{type}`]-(d)
+                    where n.uri = '{uri}' 
+                    return d
+                    '''.format(sub=SUB_CLASS, uri=uri, type=HAS_TYPE)
+            request_forward_1 = tx.run(query)
+
+            query = '''
+                    match(n)<-[:`{type}`]-(d)
+                    where n.uri = '{uri}' 
+                    return d
+                    '''.format(uri=uri, type=HAS_TYPE)
+            request_forward_2 = tx.run(query)
+
+            result = []
+            result += [self.nodeToDict(record['d']) for record in request_forward_1]
+            result += [self.nodeToDict(record['d']) for record in request_forward_2]
+            return result
+        with self.driver.session() as session:
+            result = session.write_transaction(_service_func, uri)
+        
+        return result
+
     def collect_signatures_object_custom(self, uri):
         def _service_func(tx,uri):
             query = '''
@@ -316,15 +352,14 @@ class NeoRepo:
     def nodeToDict(self, node):
         if node is None:
             return None
-
         result = {
-            'id': node['uri'],
+            'id': node.get('uri'),
             'position': {'x': 0, 'y': 0},
             'type': 'mainNode',
             'data': {}
         }
         data = {}
-        data['id'] = node.id
+        data['id'] = node.element_id
         data['labels'] = list(node.labels)
         data['params'] = list(node.keys())
         data[LABEL] = node.get(LABEL)
@@ -352,7 +387,7 @@ class NeoRepo:
             return None
 
         result = {
-            'id': node.id,
+            'id': node.element_id,
             'source': str(node.start_node['uri']),
             'target': str(node.end_node['uri']),
             'type': 'mainEdge',
@@ -360,7 +395,7 @@ class NeoRepo:
         }
 
         data = {}
-        data['id'] = node.id
+        data['id'] = node.element_id
         data['uri'] = node.type
         data['labels'] = [node.type]
         data['params'] = list(node.keys())
@@ -420,4 +455,5 @@ class NeoRepo:
             data += temp + ','
         data = data[:-1]
         data += "}"
+
         return data

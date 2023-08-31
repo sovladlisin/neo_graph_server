@@ -1,7 +1,7 @@
 from db.api.ontology.NeoRepository import NeoRepo
 from core.settings import *
 import uuid
-
+import pprint 
 from .namespace import *
 
 class OntologyRepo:
@@ -11,21 +11,108 @@ class OntologyRepo:
         self.nr = NeoRepo(DB_URI,DB_USER, DB_PASSWORD, ontology_uri)
         self.ontology_uri = ontology_uri
 
+
+        ontology_node = self.nr.get_node_by_uri(uri=ontology_uri)
+        if ontology_node is not None:
+            self.signature = ontology_node['data']['params_values'].get(ONTOLOGY_SIGNATURE,[ontology_uri])
+        else:
+            self.signature = []
+
     def close(self):
         self.nr.close()
 
     def getFullOntology(self):
-        nodes, arcs = self.nr.get_nodes_and_arcs_by_labels(labels=[self.ontology_uri])
-        return nodes, arcs
+        labels_not = ['Ontology', 'Resource', 'Pattern']
+
+        result_nodes = []
+        result_arcs = []
+        result_arc_names = []
+        for s in self.signature:
+            nodes, arcs = self.nr.get_nodes_and_arcs_by_labels(labels=[s])
+            temp = [s]
+            temp.append(OBJECT_PROPERTY)
+            arc_names = self.nr.get_nodes_by_labels(temp)
+
+            result_nodes += nodes
+            result_arcs += arcs
+            result_arc_names += arc_names
+
+        r_arcs = []
+        r_arcs_dict = {}
+        for a in result_arcs:
+            if a['data']['id'] not in r_arcs_dict.keys():
+                r_arcs.append(a)
+                r_arcs_dict[a['data']['id']] = 1
+
+        return result_nodes, r_arcs, result_arc_names
+    
+    def getFullOntologyByUri(self, uri):
+        labels = [uri]
+        nodes, arcs = self.nr.get_nodes_and_arcs_by_labels(labels=labels)
+        arc_names = self.nr.get_nodes_by_labels([OBJECT_PROPERTY, uri])
+        return nodes, arcs, arc_names
+    
 
     def getOntologies(self):
         return self.nr.get_nodes_by_labels(['Ontology'])
+    
+    def getResourceOntologies(self):
+        return self.nr.get_nodes_by_labels(['Resource'])
+    
+    def getPatternOntologies(self):
+        return self.nr.get_nodes_by_labels(['Pattern'])
 
     def getRandomUri(self):
         return self.ontology_uri + '/' +  str(uuid.uuid4())
 
     def createOntology(self, title, comment):
-        labels = ['Ontology', self.ontology_uri]
+        labels = ['Ontology']
+        params = {}
+        params[LABEL]= title
+        params[COMMENT]= comment
+        params[URI]= self.ontology_uri
+        params[ONTOLOGY_SIGNATURE] = [self.ontology_uri]
+        
+        ontology_node = self.nr.create_node(labels=labels,props=params)
+        return ontology_node
+    
+    def branchOntology(self, title, comment, ontology_type, new_ontology_uri):
+        labels = [ontology_type]
+        params = {}
+        params[LABEL]= title
+        params[COMMENT]= comment
+        params[URI]= new_ontology_uri
+
+        signature = self.signature
+        signature.append(new_ontology_uri)
+
+        params[ONTOLOGY_SIGNATURE] = signature
+        
+        ontology_node = self.nr.create_node(labels=labels,props=params)
+        return ontology_node
+    
+    def createResourceOntology(self, title, comment):
+        labels = ['Resource']
+        params = {}
+        params[LABEL]= title
+        params[COMMENT]= comment
+        params[URI]= self.ontology_uri
+        
+        ontology_node = self.nr.create_node(labels=labels,props=params)
+        return ontology_node
+
+    def branchResourceOntology(self, title, comment):
+        labels = ['Resource']
+        params = {}
+        params[LABEL]= title
+        params[COMMENT]= comment
+        params[URI]= self.ontology_uri
+        
+        ontology_node = self.nr.create_node(labels=labels,props=params)
+        return ontology_node
+    
+    def createPatternOntology(self, title, comment):
+        labels = ['Pattern']
         params = {}
         params[LABEL]= title
         params[COMMENT]= comment
@@ -40,6 +127,59 @@ class OntologyRepo:
         local_labels = labels
         local_labels.append(self.ontology_uri)
         return self.nr.get_nodes_by_labels(local_labels)
+    
+    def getItemByUri(self, uri):
+        return self.nr.get_node_by_uri(uri)
+    
+    def getClassObjects(self, class_uri):
+        return self.nr.collect_nodes_from_root_uri(uri = class_uri)
+
+    def copyOntology(self, origin_ontology_uri):
+        nodes, arcs, names = self.getFullOntologyByUri(origin_ontology_uri)
+        print('\n\n')
+        pprint.pprint(nodes)
+        print('\n\n')
+        pprint.pprint(arcs)
+        print('\n\n')
+
+        uris_dict = {}
+
+        # return None
+        for node in nodes:
+            data = node.get('data', {})
+
+            old_uri = data['params_values']['uri']
+            new_uri = self.getRandomUri()
+            uris_dict[old_uri] = new_uri
+            data['params_values']['uri'] = new_uri
+
+            node_labels = [self.ontology_uri]
+            node_labels += data.get('labels', [])
+            if origin_ontology_uri in node_labels:
+                node_labels.remove(origin_ontology_uri)
+
+            print('\n\n')
+            pprint.pprint(node_labels)
+            print('\n\n')
+
+            new_node = self.nr.create_node(labels=node_labels, props=data.get('params_values', {}))
+
+       
+
+        for arc in arcs:
+            data = arc.get('data', {})
+            old_label = data['uri']
+
+            start_node_uri = arc.get('source','')
+            end_node_uri = arc.get('target','')
+
+            start = uris_dict[start_node_uri]
+            end = uris_dict[end_node_uri]
+            label = uris_dict.get(old_label, old_label)
+
+            rel_node = self.nr.create_relation(from_uri=start, to_uri=end, labels=[label])
+
+        return self.getFullOntology()
 
     def createClass(self, title, comment, parent_uri = None):
         uri = self.getRandomUri()
@@ -163,7 +303,6 @@ class OntologyRepo:
             rel = self.nr.create_relation(source_uri, target_uri, labels=[label])
             created_rels.append(rel)
 
-        print('created_nodes\n', created_nodes)
 
         return created_nodes, created_rels
 
@@ -173,7 +312,6 @@ class OntologyRepo:
         result = []
         for pattern in patterns:
             query = pattern.get('target_query', '')
-            print(query, self.nr.custom_query(query=query, name='node'))
             pattern['target_nodes'] = self.nr.custom_query(query=query, name='node')
 
 
@@ -221,6 +359,17 @@ class OntologyRepo:
         node['data']['attributes'] = attributes
         node['data']['obj_attributes'] = obj_attributes
         return node
+    
+    def createRelation(self, source, target):
+        
+        from_node = self.nr.get_node_by_uri(uri=source)
+        to_node = self.nr.get_node_by_uri(uri=target)
+
+        if CLASS in from_node['data']['labels']:
+            if CLASS in to_node['data']['labels']:
+                rel = self.nr.create_relation(from_uri=source, to_uri=target, labels=[SUB_CLASS])
+
+        return rel
 
     def addClassAtribute(self, uri, label):
         labels = [DATATYPE_PROPERTY, self.ontology_uri]
@@ -247,6 +396,9 @@ class OntologyRepo:
 
         return [attr_node], [rel,rel2]
     
+    def getItemsByUris(self, uris):
+        return self.nr.get_nodes_by_uris(uris)
+    
     def updateEntity(self,uri, params, obj_params = None):
         props = {}
         for l in params:
@@ -255,20 +407,26 @@ class OntologyRepo:
         result_nodes = [self.nr.set_node(uri=uri, props=props)]
         result_arcs = []
 
+
+
+
         if (obj_params):
             for p in obj_params:
-                print(p)
-                value = p['value']
-                field = p['field']
+                # print(p)
+                value = p.get('value', None)
+                field = p.get('field', None)
                 if value is not None:
                     if p['direction'] == 1:
+                        self.nr.delete_relation(p['relation']['id'])
                         rel = self.nr.create_relation(from_uri=uri, to_uri=value['data']['uri'], labels=[field['data']['uri']])
                         result_arcs.append(rel)
                     else:
+                        self.nr.delete_relation(p['relation']['id'])
                         rel = self.nr.create_relation(from_uri=value['data']['uri'], to_uri=uri, labels=[field['data']['uri']])
                         result_arcs.append(rel)
                 else:
-                    if p['relation'] is not None:
+                    rel = p.get('relation', None)
+                    if rel is not None:
                         self.nr.delete_relation(p['relation']['id'])
 
             

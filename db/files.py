@@ -21,69 +21,44 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from docx import Document
 
+def collect_file(res):
+    result = {}
+    result['link'] = res.source.url
+    result['name'] = res.name
+    result['id'] = res.id
+    result['ontology_uri'] = res.ontology_uri
+    result['uris'] = json.loads(res.uris)
+
+    return result
+
 @api_view(['POST', ])
-@permission_classes((IsAuthenticated,))
+@permission_classes((AllowAny,))
 def uploadFile(request):
 
- 
+    data = json.loads(request.POST.get('body'))
     file_d = request.FILES['file']
-
-    name = request.GET.get('name','')
-    object_id = request.GET.get('object_id','')
-    file_type = request.GET.get('file_type','')
-    note = request.GET.get('note','')
-
-    res_type = request.GET.get('res_type',None)
-
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
-
-    object_node = o.getEntityById(object_id)
-    object_uri = object_node.get('uri')
-
+    name = data.get('name','')
+    ontology_uri = data.get('ontology_uri','')
+    uris = data.get('uris',[])
     art_name = str(datetime.datetime.now().time())[:8]
 
+    file_type = file_d.content_type.split('/')[1]
 
     res = Resource()
     res.source.save(file_type + art_name + '.' + file_type,  ContentFile(file_d.read()))
     res.name = name
+    res.ontology_uri = ontology_uri
+    res.uris = json.dumps(uris)
     res.resource_type = file_type
+
     res.save()
 
-
-    r, visual = o.connectDigitalToResource(file_type, res.id,name,object_node.id, note,res_type )
-    res.original_object_uri = r['uri']
-    res.save()
-
-
-    # collect file to return 
-
-    response = {}
-    response['resource'] = o.nodeToDict(visual)
-    response['media'] = []
-    response['genres'] = []
-    response['lang'] = []
-    response['events'] = []
-    response['media_carrier'] = [
-        {
-            'file': {
-                'name': name,
-                'source': res.source.url,
-                'id': res.id,
-                'type': file_type
-            }
-        }
-    ]
-
-    o.close()
-
-
-
-    return JsonResponse(response, safe=False)
+    return Response(collect_file(res))
 
 
 
 @api_view(['DELETE', ])
-@permission_classes((IsAuthenticated,))
+@permission_classes((AllowAny,))
 def deleteFile(request):
     id = request.GET.get('id',None)
     if id is None:
@@ -91,6 +66,45 @@ def deleteFile(request):
     resource = Resource.objects.get(pk=id)
     resource.delete()
     return HttpResponse(status=200)
+
+@api_view(['GET', ])
+@permission_classes((AllowAny,))
+def getFiles(request):
+    ontology_uri = request.GET.get('ontology_uri',None)
+
+    resources = Resource.objects.all().filter(ontology_uri = ontology_uri)
+    response = []
+    for f in resources:
+        response.append(collect_file(f))
+    return Response(response)
+
+@api_view(['GET', ])
+@permission_classes((AllowAny,))
+def getFile(request):
+    id = request.GET.get('id',None)
+    if id is None:
+        return HttpResponse(status=403)
+    resource = Resource.objects.get(pk=id)
+    return Response(collect_file(resource))
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def updateFile(request):
+    data = json.loads(request.body.decode('utf-8'))
+
+    id = data.get('id','')
+    name = data.get('name','')
+    ontology_uri = data.get('ontology_uri','')
+    uris = data.get('uris',[])
+    
+    res = Resource.objects.get(pk=id)
+    res.name = name
+    res.ontology_uri = ontology_uri
+    res.uris = uris
+    res.save()
+
+    return Response(collect_file(res))
+
 
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))

@@ -3,6 +3,19 @@ from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from user_auth.models import Account
 
 
+class Project(models.Model):
+    name = models.TextField()
+    ontologies_uris = models.TextField(default='[]')
+    res_ontologies_uris = models.TextField(default='')
+
+    selected_classes_uris = models.TextField(default='[]')
+    res_selected_classes_uris = models.TextField(default='[]')
+    res_star_classes_uris = models.TextField(default='[]')
+
+    account = models.ForeignKey(
+        Account, blank=True, null=True, related_name='resource_account', on_delete=models.CASCADE)
+
+
 class File(models.Model):
     bytes = models.TextField()
     filename = models.CharField(max_length=255)
@@ -11,8 +24,9 @@ class File(models.Model):
 class Resource(models.Model):
     source = models.FileField(upload_to='db.File/bytes/filename/mimetype', blank=True, null=True)
     name = models.CharField(default='Не указано', max_length=500)
-    original_object_uri = models.CharField(default='', max_length=1000)
     resource_type = models.CharField(default='', max_length=300)
+    uris = models.TextField(default='[]')
+    ontology_uri = models.TextField(default='')
 
 
     def save(self, *args, **kwargs):
