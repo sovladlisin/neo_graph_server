@@ -22,7 +22,7 @@ class OntologyRepo:
         self.nr.close()
 
     def getFullOntology(self):
-        labels_not = ['Ontology', 'Resource', 'Pattern']
+        labels_not = ['Ontology', 'ResourceOntology', 'Pattern']
 
         result_nodes = []
         result_arcs = []
@@ -57,7 +57,7 @@ class OntologyRepo:
         return self.nr.get_nodes_by_labels(['Ontology'])
     
     def getResourceOntologies(self):
-        return self.nr.get_nodes_by_labels(['Resource'])
+        return self.nr.get_nodes_by_labels(['ResourceOntology'])
     
     def getPatternOntologies(self):
         return self.nr.get_nodes_by_labels(['Pattern'])
@@ -76,6 +76,8 @@ class OntologyRepo:
         ontology_node = self.nr.create_node(labels=labels,props=params)
         return ontology_node
     
+
+    # ontology_type: Resource, Ontology, Pattern
     def branchOntology(self, title, comment, ontology_type, new_ontology_uri):
         labels = [ontology_type]
         params = {}
@@ -92,7 +94,7 @@ class OntologyRepo:
         return ontology_node
     
     def createResourceOntology(self, title, comment):
-        labels = ['Resource']
+        labels = ['ResourceOntology']
         params = {}
         params[LABEL]= title
         params[COMMENT]= comment
@@ -102,7 +104,7 @@ class OntologyRepo:
         return ontology_node
 
     def branchResourceOntology(self, title, comment):
-        labels = ['Resource']
+        labels = ['ResourceOntology']
         params = {}
         params[LABEL]= title
         params[COMMENT]= comment
