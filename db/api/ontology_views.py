@@ -68,7 +68,7 @@ def branchOntology(request):
     ontology_uri = data.get('ontology_uri', '')
     title = data.get('title', '')
     comment = data.get('comment', '')
-    ontology_type = data.get('ontology_type', '')
+    ontology_type = data.get('ontology_type', '') # Resource | Ontology 
 
 
     base = MAIN_ONTOLOGY if ontology_type == 'Ontology' else MAIN_RESOURCE
