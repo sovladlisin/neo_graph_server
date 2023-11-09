@@ -21,6 +21,11 @@ class OntologyRepo:
     def close(self):
         self.nr.close()
 
+    def deleteOntology(self, ):
+        r = self.nr.delete_node_by_labels([self.ontology_uri])
+        return self.ontology_uri
+        
+
     def getFullOntology(self):
         labels_not = ['Ontology', 'ResourceOntology', 'Pattern']
 

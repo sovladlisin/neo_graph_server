@@ -14,6 +14,18 @@ class NeoRepo:
     def close(self):
         self.driver.close()
 
+    def delete_node_by_labels(self, labels):
+        def _service_func(tx, labels):
+            t_labels = self.transform_labels(labels)
+            query = "MATCH (n:{labels}) DETACH DELETE n".format(labels=t_labels)
+            request = tx.run(query)
+            return True
+
+        with self.driver.session() as session:
+            result = session.write_transaction(_service_func,  labels)
+        
+        return result
+
     def delete_node_by_uri(self, uri):
         def _service_func(tx, uri):
             # data = self.transform_props(props)

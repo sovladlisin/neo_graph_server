@@ -61,6 +61,14 @@ def createOntology(request):
 
     return Response(result)
 
+@api_view(['DELETE', ])
+@permission_classes((AllowAny,))
+def deleteOntology(request):
+    ontology_uri = request.GET.get('ontology_uri', None)
+    o = OntologyRepo(ontology_uri)
+    result = o.deleteOntology()
+    return Response(result)
+
 @api_view(['POST', ])
 @permission_classes((AllowAny,))
 def branchOntology(request):

@@ -27,7 +27,8 @@ from db.api.ontology_views import (
     collectEntity,
     createPatternOntology,
     getPatternOntologies,
-    branchOntology
+    branchOntology,
+    deleteOntology
 )
 
 from db.api.projects import (
@@ -97,6 +98,8 @@ urlpatterns = [
     path('branchOntology',branchOntology , name='branchOntology'),
 
     path('createRelation',createRelation , name='createRelation'),
+    path('deleteOntology',deleteOntology , name='deleteOntology'),
+    
     
     
 ]
