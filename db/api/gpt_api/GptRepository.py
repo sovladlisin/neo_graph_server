@@ -47,7 +47,7 @@ class GptRepository():
 
         for node in nodes:
             similarity = cosine_similarity(embedding, node['embedding'])
-            if similarity is not 0:
+            if similarity != 0:
                 similarity_array.append({
                     'node': node['node'],
                     'similarity': similarity
