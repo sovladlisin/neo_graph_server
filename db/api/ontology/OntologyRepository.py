@@ -24,6 +24,7 @@ class OntologyRepo:
 
     def deleteOntology(self, ):
         r = self.nr.delete_node_by_labels([self.ontology_uri])
+        r2 = self.nr.delete_node_by_uri(self.ontology_uri)
         return self.ontology_uri
         
 
