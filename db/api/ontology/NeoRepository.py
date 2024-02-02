@@ -3,6 +3,10 @@ from  neo4j import time
 import uuid
 import json 
 from .namespace import *
+from db.models import Resource
+import base64
+from io import StringIO, BytesIO
+from PIL import Image
 
 class NeoRepo:
 
@@ -87,6 +91,7 @@ class NeoRepo:
             result = session.write_transaction(_service_func,  id)
         
         return int(id)
+    
 
     def get_nodes_and_arcs_by_labels(self, labels):
 
@@ -94,7 +99,7 @@ class NeoRepo:
 
             if len(labels):
                 t_labels = self.transform_labels(labels)
-                query = 'MATCH (n:{labels}) WHERE NOT n:Ontology:Resource:Pattern OPTIONAL MATCH (n)-[r]-(d) WHERE NOT n:Ontology:Resource:Pattern RETURN n,r,d'.format(labels=t_labels)
+                query = 'MATCH (n:{labels}) WHERE NOT n:Ontology:Resource:Pattern OPTIONAL MATCH (n)-[r]-(d) WHERE NOT n:Ontology:ResourceOntology:Pattern RETURN n,r,d'.format(labels=t_labels)
             else:
                 query = 'MATCH (n)-[r]-() RETURN n,r'
 
@@ -381,14 +386,46 @@ class NeoRepo:
         data['toggled_data'] = []
         data['params_values'] = {}
 
+        
+
+
+
+        data['file'] = None
+        for r in Resource.objects.all().filter(ontology_uri=self.main_uri).filter(file_uri=node.get('uri')):
+            temp = {}
+            temp['id'] = r.id
+            temp['url'] = r.source.url
+            temp['file_object'] = self.transformFileToBase64(r.source)
+            temp['name'] = r.name
+            temp['resource_type'] = r.resource_type
+            temp['file_uri'] = r.file_uri
+            temp['ontology_uri'] = r.ontology_uri
+            data['file'] = temp
+
+        data['connected_file'] = None
+        for r in Resource.objects.all().filter(ontology_uri=self.main_uri).filter(connected_entity_uri=node.get('uri')):
+            temp = {}
+            temp['id'] = r.id
+            temp['url'] = r.source.url
+            temp['file_object'] = self.transformFileToBase64(r.source)
+            temp['name'] = r.name
+            temp['resource_type'] = r.resource_type
+            temp['file_uri'] = r.file_uri
+            temp['ontology_uri'] = r.ontology_uri
+            data['connected_file'] = temp
+
+       
+
         for param in node.keys():
             value = node.get(param)
+            data['params_values'][param] = ''
             if isinstance(value, time.DateTime):
                 pass
             if isinstance(value, uuid.UUID):
                 data['params_values'][param] = str(value)
             else:
                 data['params_values'][param] = value
+
 
         result['data'] = data
 
@@ -421,6 +458,20 @@ class NeoRepo:
 
         return result
 
+    def transformFileToBase64(self, source_file):
+        if source_file.name is not None and len(source_file.name) != 0:
+            content_file = source_file.read()
+            stream = BytesIO(content_file)
+            image = Image.open(stream)
+            img_byte_arr = BytesIO()
+            image.save(img_byte_arr, format='WEBP')
+
+            img_str = base64.b64encode(img_byte_arr.getvalue())
+
+            result = 'data:image/'+'PNG' + ';base64,' + img_str.decode("utf-8")
+            return result
+        return ''
+    
     def custom_query(self, query, name, is_node = True):
         def _service_func(tx,query,name,is_node):
             request = tx.run(query)

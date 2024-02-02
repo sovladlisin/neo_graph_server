@@ -13,103 +13,44 @@ KEY = "qwerqwqwefknskacnfjbnjvgjeriuyweoLKUHHLKJEfhkerjnfkjrw1lklk~~~fesfdcvse"
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-
-from .serializers import LoginSerializer, RegistrationSerializer
-
-@api_view(['POST', ])
-@permission_classes((AllowAny,))
-def registration_view(request):
-
-    serializer = RegistrationSerializer(data=request.data)
-    data = {}
-    if serializer.is_valid():
-        account = serializer.save()
-        data = collect_account_func(account)
-
-    else:
-        data = serializer.errors
-    return Response(data)
+import uuid
 
 
 @api_view(['POST', ])
 @permission_classes((AllowAny,))
 def login_view(request):
 
-    serializer = LoginSerializer(data=request.data)
-    data = {}
-    if serializer.is_valid():
-        account = serializer.authenticate()
-        data = collect_account_func(account)
-
-    else:
-        print('valid error')
-        data = serializer.errors
-    return Response(data)
-
-
-
-
-@api_view(['GET', ])
-@permission_classes((IsAuthenticated,))
-def get_users(request):
-
-    user = request.user
-    if (user.is_admin == False):
-        return HttpResponse(status=401)
-
-    response = []
-    for u in Account.objects.all():
-        response.append(collect_account_func(u, True))
-
-    return Response(response)
-
-
-
-@api_view(['POST', ])
-@permission_classes((IsAuthenticated,))
-def update_user_perm(request):
-
-    user = request.user
-    if (user.is_admin == False):
-        return HttpResponse(status=401)
-
     data = json.loads(request.body.decode('utf-8'))
-    user_pk = data.get('user_pk', None)
-    is_admin = data.get('is_admin', None)
-    is_editor = data.get('is_editor', None)
 
-    if None in [user_pk, is_admin, is_editor]:
-        return HttpResponse(status=400)
-    
-    new_user = Account.objects.get(pk=user_pk)
-    new_user.is_admin = is_admin
-    new_user.is_editor = is_editor
-    new_user.save()
+    vk_id = data.get("vk_id")
+    vk_name = data.get("vk_name")
+    vk_avatar = data.get("vk_avatar")
+    print('\n\n\n',vk_id, vk_name,vk_avatar, '\n\n\n')
+    found = Account.objects.all().filter(vk_id=int(vk_id))
+    if found.count() == 1:
+        account = found.first()
+        account.vk_avatar = vk_avatar
+        account.vk_name = vk_name
+        account.save()
 
-    response = collect_account_func(new_user, True)
-
-    
-
-    return Response(response)
-
-
-
-
-
-def collect_account_func(account, safe=False):
-    data = {}
-    data['response'] = 'Success'
-    data['email'] = account.email
-    data['username'] = account.email
-
-    if safe is False:
-        token = Token.objects.get(user=account).key
-        data['token'] = token
     else:
-        data['token'] = ''
+        account = Account(
+            email=str(vk_id) + '@local.com',
+            username=vk_name,
+            vk_id=int(vk_id),
+            vk_name=vk_name,
+            vk_avatar=vk_avatar
+        )
+        account.set_password(str(uuid.uuid4()))
+        account.is_active = True
+        account.save()
+    
+    return Response(collect_account(account))
 
-
-    data['is_admin'] = account.is_admin
-    data['is_editor'] = account.is_editor
-    data['id'] = account.pk
-    return data
+def collect_account(account):
+    temp = {}
+    temp['id'] = account.id
+    temp['vk_name'] = account.vk_name
+    temp['vk_id'] = account.vk_id
+    temp['vk_avatar'] = account.vk_avatar
+    return temp

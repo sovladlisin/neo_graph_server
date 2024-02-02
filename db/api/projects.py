@@ -86,3 +86,87 @@ def getCustomPage(request):
     objects = o.getClassObjects(class_uri)
 
     return Response({'class_node': class_node, 'object_nodes': objects})
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def collectProjectEmbeddings(request):
+    data = json.loads(request.body.decode('utf-8'))
+    id = data.get('id', None)
+    project_repo = ProjectsRepo()
+    project_repo.collectProjectEmdeddings(id)
+    return HttpResponse(status=200)
+
+@api_view(['GET', ])
+@permission_classes((AllowAny,))
+def getProjectEmbedding(request):
+    id = request.GET.get('id', None)
+    project_repo = ProjectsRepo()
+    return Response(project_repo.getProjectEmbedding(id))
+
+@api_view(['GET', ])
+@permission_classes((AllowAny,))
+def getProjectMessage(request):
+    id = request.GET.get('id', None)
+    text = request.GET.get('text', None)
+    project_repo = ProjectsRepo()
+    return Response(project_repo.getProjectMessage(id,text))
+
+
+# -----------------------------PAGES------------------------------------------
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def createPage(request):
+    data = json.loads(request.body.decode('utf-8'))
+    page_params = data.get('params', {})
+    o = ProjectsRepo()
+    return Response(o.updatePage(params=page_params))
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def updatePage(request):
+    data = json.loads(request.body.decode('utf-8'))
+    page_params = data.get('params', {})
+    o = ProjectsRepo()
+    return Response(o.updatePage(params=page_params))
+
+@api_view(['DELETE', ])
+@permission_classes((AllowAny,))
+def deletePage(request):
+    id = request.GET.get('id', None)
+    o = ProjectsRepo()
+    result = o.deletePage(id=id)
+    return Response(result)
+
+@api_view(['GET', ])
+@permission_classes((AllowAny,))
+def getPage(request):
+    id = request.GET.get('id', None)
+    o = ProjectsRepo()
+    return Response(o.getPage(id=id))
+
+# -----------------------------PAGE BLOCKS------------------------------------------
+
+@api_view(['DELETE', ])
+@permission_classes((AllowAny,))
+def deletePageBlock(request):
+    id = request.GET.get('id', None)
+    o = ProjectsRepo()
+    result = o.deletePageBlock(id=id)
+    return Response(result)
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def updatePageBlock(request):
+    data = json.loads(request.body.decode('utf-8'))
+    page_block_params = data.get('params', {})
+    o = ProjectsRepo()
+    return Response(o.updatePageBlock(params=page_block_params))
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def createPageBlock(request):
+    data = json.loads(request.body.decode('utf-8'))
+    page_block_params = data.get('params', {})
+    o = ProjectsRepo()
+    return Response(o.updatePageBlock(params=page_block_params))

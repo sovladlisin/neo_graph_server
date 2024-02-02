@@ -33,3 +33,5 @@ django-cors-headers
 django-sendfile
 neo4j
 pyjwt
+numpy
+requests

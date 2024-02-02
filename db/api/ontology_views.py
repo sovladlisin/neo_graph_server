@@ -46,6 +46,23 @@ def getPatternOntologies(request):
     result = o.getPatternOntologies()
     return Response(result)
 
+
+@api_view(['GET', ])
+@permission_classes((AllowAny,))
+def getOntologyTree(request):
+    ontology_uri = request.GET.get('ontology_uri', None)
+    if ontology_uri is None:
+        return HttpResponse(status=400)
+    
+    o = OntologyRepo(ontology_uri=ontology_uri)
+    result_nodes, r_arcs, result_arc_names = o.getFullOntology()
+    response = {
+        'nodes': result_nodes,
+        'arcs': r_arcs,
+        'ontology_uri': ontology_uri
+    }
+    return Response(response)
+
 @api_view(['POST', ])
 @permission_classes((AllowAny,))
 def createOntology(request):
@@ -172,5 +189,20 @@ def collectEntity(request):
     o.close()
 
     return Response(node)
+
+@api_view(['POST', ])
+@permission_classes((AllowAny,))
+def collectClassSimpleSignature(request):
+    data = json.loads(request.body.decode('utf-8'))
+
+    ontology_uri =data.get('ontology_uri', None)
+    class_uri = data.get('class_uri', None)
+
+    o = OntologyRepo(ontology_uri)
+    node = o.collect_class_simple_signature(class_uri)
+    o.close()
+
+    return Response(node)
+
 
 

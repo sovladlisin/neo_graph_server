@@ -25,10 +25,12 @@ from db.api.ontology_views import (
     createResourceOntology,
     getItemsByLabels,
     collectEntity,
+    collectClassSimpleSignature,
     createPatternOntology,
     getPatternOntologies,
     branchOntology,
-    deleteOntology
+    deleteOntology,
+    getOntologyTree
 )
 
 from db.api.projects import (
@@ -37,7 +39,20 @@ from db.api.projects import (
     createProject,
     updateProject,
     deleteProject,
-    getCustomPage
+    getCustomPage,
+
+    createPage,
+    updatePage,
+    deletePage,
+    getPage,
+
+    createPageBlock,
+    updatePageBlock,
+    deletePageBlock,
+
+    collectProjectEmbeddings,
+    getProjectEmbedding,
+    getProjectMessage
 )
 
 from db.files import (
@@ -63,6 +78,20 @@ urlpatterns = [
     path('updateProject',updateProject , name='updateProject'),
     path('deleteProject',deleteProject , name='deleteProject'),
     path('getCustomPage',getCustomPage , name='getCustomPage'),
+    path('collectProjectEmbeddings',collectProjectEmbeddings , name='collectProjectEmbeddings'),
+    path('getProjectEmbedding',getProjectEmbedding , name='getProjectEmbedding'),
+    path('getProjectMessage',getProjectMessage , name='getProjectMessage'),
+
+    path('createPage',createPage , name='createPage'),
+    path('updatePage',updatePage , name='updatePage'),
+    path('deletePage',deletePage , name='deletePage'),
+    path('getPage',getPage , name='getPage'),
+
+    path('createPageBlock',createPageBlock , name='createPageBlock'),
+    path('updatePageBlock',updatePageBlock , name='updatePageBlock'),
+    path('deletePageBlock',deletePageBlock , name='deletePageBlock'),
+
+
 
 
     path('getGraph',getGraph , name='getGraph'),
@@ -88,6 +117,8 @@ urlpatterns = [
 
     path('getItemsByLabels', getItemsByLabels, name= 'getItemsByLabels'),
     path('collectEntity',collectEntity , name='collectEntity'),
+    path('collectClassSimpleSignature',collectClassSimpleSignature , name='collectClassSimpleSignature'),
+    path('getOntologyTree',getOntologyTree , name='getOntologyTree'),
 
 
 

@@ -52,6 +52,9 @@ class Account(AbstractBaseUser):
 
     objects = MyAccountManager()
 
+    vk_id = models.IntegerField(default=-1)
+    vk_name = models.TextField(default='')
+    vk_avatar = models.TextField(default='')
 
 
     referal_cashback = models.IntegerField(default=0)

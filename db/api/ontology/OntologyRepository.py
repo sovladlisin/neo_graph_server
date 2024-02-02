@@ -3,7 +3,8 @@ from core.settings import *
 import uuid
 import pprint 
 from .namespace import *
-
+import pprint
+from db.models import Resource
 class OntologyRepo:
 
     def __init__(self, ontology_uri):
@@ -57,6 +58,16 @@ class OntologyRepo:
         arc_names = self.nr.get_nodes_by_labels([OBJECT_PROPERTY, uri])
         return nodes, arcs, arc_names
     
+    def getOntologyMainTree(self):
+        labels = [self.ontology_uri, CLASS]
+        nodes, arcs = self.nr.get_nodes_and_arcs_by_strict_labels(labels=labels)
+        return nodes, arcs
+
+
+    def getNodeByUri(self,uri):
+        onto_node = self.nr.get_node_by_uri(uri)
+        return onto_node
+
 
     def getOntologies(self):
         return self.nr.get_nodes_by_labels(['Ontology'])
@@ -326,10 +337,18 @@ class OntologyRepo:
 
         return result
 
+    def collect_class_simple_signature(self, uri):
+        
+        attributes = self.nr.collect_signatures_datatype_custom(uri=uri)
+        print('attr\n\n\n',attributes, self.ontology_uri, uri)
+        return attributes
+
     def collectEntity(self, uri):
         node = self.nr.get_node_by_uri(uri)
         attributes = []
         obj_attributes = []
+        object_class_name = ''
+        
         if CLASS in node['data']['labels']:
             attributes = self.nr.collect_signatures_datatype_custom(uri=uri)
             obj_attributes = self.nr.collect_signatures_object_custom(uri=uri)
@@ -338,6 +357,7 @@ class OntologyRepo:
         if OBJECT in node['data']['labels']:
             object_classes = self.nr.get_node_parents(uri=uri, relation_labels=[HAS_TYPE], parent_labels=[CLASS])
             object_class_uri = object_classes[0]['data']['uri']
+            object_class_name = object_classes[0]['data'].get('params_values',{}).get(LABEL, ['1','1'])[0].split('@')[0]
 
             attributes = self.nr.collect_signatures_datatype_custom(uri=object_class_uri)
             obj_attributes = self.nr.collect_signatures_object_custom(uri=object_class_uri)
@@ -361,8 +381,8 @@ class OntologyRepo:
                             o['relation'] = v
                     new_obj_attributes.append(o)         
                 obj_attributes = new_obj_attributes
-
-
+        
+        node['data']['obj_class_name'] = object_class_name
         node['data']['attributes'] = attributes
         node['data']['obj_attributes'] = obj_attributes
         return node
@@ -375,7 +395,9 @@ class OntologyRepo:
         if CLASS in from_node['data']['labels']:
             if CLASS in to_node['data']['labels']:
                 rel = self.nr.create_relation(from_uri=source, to_uri=target, labels=[SUB_CLASS])
-
+        if OBJECT in from_node['data']['labels']:
+            if CLASS in to_node['data']['labels']:
+                rel = self.nr.create_relation(from_uri=source, to_uri=target, labels=[HAS_TYPE])
         return rel
 
     def addClassAtribute(self, uri, label):
@@ -415,22 +437,60 @@ class OntologyRepo:
         result_arcs = []
 
 
+        current_node = self.nr.get_node_by_uri(uri)
+
+
 
 
         if (obj_params):
             for p in obj_params:
-                # print(p)
+                print('\n\n\n')
+                pprint.pprint(p)
+                print('\n\n\n')
                 value = p.get('value', None)
                 field = p.get('field', None)
                 if value is not None:
                     if p['direction'] == 1:
-                        self.nr.delete_relation(p['relation']['id'])
+                        if 'relation' in p:
+                            self.nr.delete_relation(p['relation']['id'])
                         rel = self.nr.create_relation(from_uri=uri, to_uri=value['data']['uri'], labels=[field['data']['uri']])
                         result_arcs.append(rel)
-                    else:
-                        self.nr.delete_relation(p['relation']['id'])
-                        rel = self.nr.create_relation(from_uri=value['data']['uri'], to_uri=uri, labels=[field['data']['uri']])
-                        result_arcs.append(rel)
+
+
+                    # это не работает с первого раза, потому что это 
+                    # работает только тогда, когда сам узел файла [f] уже связан с узлом, к которому он прикреплен [a]
+                    # И когда ты сохраняешь [f] то это срабатывает, потому что у него в этношениях уже есть узел [a]
+                    # решение - сделать обратное сохранение, как внизу, только для direction 0 (несмотря на то, что низ не прививязан к direction, по коду привязан)
+                    # сделал 
+                    file_d = current_node.get('data',{}).get('file',None)
+                    if file_d:
+                        r = Resource.objects.get(id=int(file_d['id']))
+                        r.connected_entity_uri = value['data']['uri']
+                        r.save()
+
+
+                    # mirror ===============================
+
+                    file_d = value.get('data',{}).get('file',None)
+                    if file_d:
+                        r = Resource.objects.get(id=int(file_d['id']))
+                        r.connected_entity_uri = current_node['data']['uri']
+                        r.save()
+
+
+                    # else:
+                    #     file_d = value.get('data',{}).get('file',None)
+                    #     if file_d:
+                    #         r = Resource.objects.get(id=int(file_d['id']))
+                    #         r.connected_entity_uri = 'hehe2'
+                    #         r.save()
+
+                       
+                    # else:
+                    #     if 'relation' in p:
+                    #         self.nr.delete_relation(p['relation']['id'])
+                    #     rel = self.nr.create_relation(from_uri=value['data']['uri'], to_uri=uri, labels=[field['data']['uri']])
+                    #     result_arcs.append(rel)
                 else:
                     rel = p.get('relation', None)
                     if rel is not None:

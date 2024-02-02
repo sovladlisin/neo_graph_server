@@ -282,15 +282,10 @@ def updateEntityFile(request):
     result_nodes, result_arcs = o.updateEntity(uri=uri,params={property_uri: file_d.source.url},obj_params=None)
     
     if prev_file:
-        uris_temp =json.loads(prev_file.uris)
-        if uri in uris_temp:
-            uris_temp.remove(uri)
-            prev_file.uris = json.dumps(uris_temp)
-            prev_file.save()
+        prev_file.file_uri = ''
+        prev_file.save()
 
-    uris_temp =json.loads(file_d.uris)
-    uris_temp.append(uri)
-    file_d.uris = json.dumps(uris_temp)
+    file_d.file_uri = uri
     file_d.save()
 
 

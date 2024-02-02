@@ -27,7 +27,7 @@ def collect_file(res):
     result['name'] = res.name
     result['id'] = res.id
     result['ontology_uri'] = res.ontology_uri
-    result['uris'] = json.loads(res.uris)
+    result['file_uri'] = res.file_uri
 
     return result
 
