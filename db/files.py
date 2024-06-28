@@ -43,6 +43,8 @@ def uploadFile(request):
     art_name = str(datetime.datetime.now().time())[:8]
 
     file_type = file_d.content_type.split('/')[1]
+    if file_d.content_type == 'text/plain':
+        file_type = 'txt'
 
     res = Resource()
     res.source.save(file_type + art_name + '.' + file_type,  ContentFile(file_d.read()))

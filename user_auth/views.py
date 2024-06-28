@@ -49,6 +49,8 @@ def login_view(request):
 
 def collect_account(account):
     temp = {}
+    token = Token.objects.get(user=account).key
+    temp['token'] = token
     temp['id'] = account.id
     temp['vk_name'] = account.vk_name
     temp['vk_id'] = account.vk_id

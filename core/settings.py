@@ -20,7 +20,7 @@ DB_URI = 'neo4j://infra.iis.nsk.su:7687'
 DB_USER="neo4j"
 DB_PASSWORD="ammonia-zero-fiber-hope-violet-5001"
 
-
+DATA_UPLOAD_MAX_MEMORY_SIZE = None
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/

@@ -1,24 +1,26 @@
 from db.api.ontology.NeoRepository import NeoRepo
 from core.settings import *
 import uuid
+import json
 import pprint 
 from .namespace import *
 import pprint
 from db.models import Resource
 class OntologyRepo:
 
-    def __init__(self, ontology_uri):
+    def __init__(self, ontology_uri = None):
 
         self.nr = NeoRepo(DB_URI,DB_USER, DB_PASSWORD, ontology_uri)
         self.ontology_uri = ontology_uri
 
-
-        ontology_node = self.nr.get_node_by_uri(uri=ontology_uri)
-        if ontology_node is not None:
-            self.signature = ontology_node['data']['params_values'].get(ONTOLOGY_SIGNATURE,[ontology_uri])
+        if ontology_uri:
+            ontology_node = self.nr.get_node_by_uri(uri=ontology_uri)
+            if ontology_node is not None:
+                self.signature = ontology_node['data']['params_values'].get(ONTOLOGY_SIGNATURE,[ontology_uri])
+            else:
+                self.signature = []
         else:
             self.signature = []
-
     def close(self):
         self.nr.close()
 
@@ -141,11 +143,14 @@ class OntologyRepo:
         return ontology_node
 
     def getItemsByLabels(self, labels, custom_q = None):
-        if custom_q is not None:
-            return self.nr.custom_query(query=custom_q, name='node')
-        local_labels = labels
-        local_labels.append(self.ontology_uri)
-        return self.nr.get_nodes_by_labels(local_labels)
+        result = []
+        for s in self.signature:
+            if custom_q is not None:
+                return self.nr.custom_query(query=custom_q, name='node')
+            local_labels = json.loads(json.dumps(labels))
+            local_labels.append(s)
+            result += self.nr.get_nodes_by_labels(local_labels)
+        return result
     
     def getItemByUri(self, uri):
         return self.nr.get_node_by_uri(uri)

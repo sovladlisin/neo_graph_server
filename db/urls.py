@@ -30,7 +30,8 @@ from db.api.ontology_views import (
     getPatternOntologies,
     branchOntology,
     deleteOntology,
-    getOntologyTree
+    getOntologyTree,
+    getItemsByUris
 )
 
 from db.api.projects import (
@@ -62,10 +63,41 @@ from db.files import (
     updateFile,
     deleteFile
 )
+
+from db.workspace import (
+    getMarkups,
+    editMarkup,
+    addMarkup,
+    deleteMarkup,
+
+    createTextEntity,
+    deleteTextEntity,
+    getTextEntities,
+
+    getTextRelations,
+    createTextRelation,
+    deleteTextRelation
+)
     
 
 
 urlpatterns = [
+    path('getTextRelations',getTextRelations , name='getTextRelations'),
+    path('createTextRelation',createTextRelation , name='createTextRelation'),
+    path('deleteTextRelation',deleteTextRelation , name='deleteTextRelation'),
+
+    path('createTextEntity',createTextEntity , name='createTextEntity'),
+    path('deleteTextEntity',deleteTextEntity , name='deleteTextEntity'),
+    path('getTextEntities',getTextEntities , name='getTextEntities'),
+
+    path('getMarkups',getMarkups , name='getMarkups'),
+    path('editMarkup',editMarkup , name='editMarkup'),
+    path('addMarkup',addMarkup , name='addMarkup'),
+    path('deleteMarkup',deleteMarkup , name='deleteMarkup'),
+
+
+
+
     path('uploadFile',uploadFile , name='uploadFile'),
     path('getFile',getFile , name='getFile'),
     path('getFiles',getFiles , name='getFiles'),
@@ -116,6 +148,7 @@ urlpatterns = [
     path('createResourceOntology',createResourceOntology , name='createResourceOntology'),
 
     path('getItemsByLabels', getItemsByLabels, name= 'getItemsByLabels'),
+    path('getItemsByUris', getItemsByUris, name= 'getItemsByUris'),
     path('collectEntity',collectEntity , name='collectEntity'),
     path('collectClassSimpleSignature',collectClassSimpleSignature , name='collectClassSimpleSignature'),
     path('getOntologyTree',getOntologyTree , name='getOntologyTree'),

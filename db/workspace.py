@@ -11,7 +11,7 @@ from.onthology_namespace import *
 from .models import Resource, Markup, Entity, TextRelation
 from .views import getList
 from core.settings import *
-
+from db.api.ontology.OntologyRepository import OntologyRepo
 
 
 # API IMPORTS
@@ -20,106 +20,46 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 
-@api_view(['GET', ])
-@permission_classes((AllowAny,))
-def getWorkspace(request):
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
-    id = request.GET.get('id', None)
-
-    origin_node,translation_node,commentary_node = o.getWorkspace(id)
-
-    origin_node_dict  = o.nodeToDict(origin_node)
-    translation_node_dict  = o.nodeToDict(translation_node)
-    commentary_node_dict = o.nodeToDict(commentary_node)
-
-    origin_text_obj = Resource.objects.filter(original_object_uri=origin_node_dict['uri']).first()
-    translation_text_obj = Resource.objects.filter(original_object_uri=translation_node_dict['uri']).first()
-    commentary_text_obj = Resource.objects.filter(original_object_uri=commentary_node_dict['uri']).first()
-
-    origin_url = origin_text_obj.source.url
-    translation_url = translation_text_obj.source.url
-    commentary_url = commentary_text_obj.source.url
-
-    node, signature, attributes, attributes_obj, resources = o.getClassObject(origin_node.id)
-
-    obj = o.nodeToDict(node)
-    attrs = []
-    attrs_obj = []
-    # for a in attributes:
-    #     attrs.append(o.nodeToDict(a))
-    for a in attributes_obj:
-        attrs_obj.append( o.relToDict(a))
-
-    origin_node_extended = {'node': obj, 'relations' : attrs_obj }
-
-    
-    resources = o.getObjectVisualItems(origin_node.id)
-    result = {
-        "origin_url":origin_url,
-        "translation_url":translation_url,
-        "origin_node":origin_node_dict,
-        "translation_node":translation_node_dict,
-        "commentary_node": commentary_node_dict,
-        "commentary_url": commentary_url,
-        'resources': resources,
-        'origin_node_extended': origin_node_extended
-    }
-
-    o.close()
-
-
-    return JsonResponse(result, safe=False)
-
-
 
 @api_view(['GET', ])
 @permission_classes((AllowAny,))
 def getMarkups(request):
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
+    ontoRep = OntologyRepo()
 
     original_object_uri = request.GET.get('original_object_uri', None)
     result = []
 
     for m in Markup.objects.filter(original_object_uri=original_object_uri):
         temp = model_to_dict(m)
-        temp['user'] = {"id": m.account.pk, "username": m.account.username}
-        temp['ontology'] = o.nodeToDict(o.getEntityByUri(m.ontology_uri))
+        temp['user'] = {"id": m.account.pk, "username": m.account.vk_name}
+        temp['ontology'] = ontoRep.getItemsByUris([m.ontology_uri])[0]
         result.append(temp)
-
-    o.close()
-    
-
-    return JsonResponse(result, safe=False)
+    return Response(result)
 
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))
 def addMarkup(request):
     user = request.user
 
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
-
     data = json.loads(request.body.decode('utf-8'))
-
     name = data.get('name', 'Не указано')
     original_object_uri = data.get('original_object_uri', '')
     ontology_uri = data.get('ontology_uri', '')
+
+    ontoRep = OntologyRepo(ontology_uri)
 
     new_markup = Markup(name=name, original_object_uri=original_object_uri, ontology_uri=ontology_uri, account=user)
     new_markup.save()
 
     result = model_to_dict(new_markup)
-    result['user'] = {"id": new_markup.account.pk, "username": new_markup.account.email}
-    result['ontology'] = o.nodeToDict(o.getEntityByUri(new_markup.ontology_uri))
-
-    o.close()
-
-    return JsonResponse(result, safe=False)
+    result['user'] = {"id": new_markup.account.pk, "username": new_markup.account.vk_name}
+    result['ontology'] = ontoRep.getItemsByUris([new_markup.ontology_uri])[0]
+    return Response(result)
 
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))
 def editMarkup(request):
-    user = request.user
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
+    ontoRep = OntologyRepo()
 
     data = json.loads(request.body.decode('utf-8'))
 
@@ -131,32 +71,23 @@ def editMarkup(request):
     new_markup.save()
 
     result = model_to_dict(new_markup)
-    result['user'] = {"id": new_markup.user.pk, "username": new_markup.user.username}
-    result['ontology'] = o.nodeToDict(o.getEntityByUri(new_markup.ontology_uri))
+    result['user'] = {"id": new_markup.account.pk, "username": new_markup.account.vk_name}
+    result['ontology'] = ontoRep.getItemsByUris([new_markup.ontology_uri])[0]
 
-    o.close()
-
-    return JsonResponse(result, safe=False)
+    return Response(result)
 
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))
 def deleteMarkup(request):
-    
-    user = request.user
-
     data = json.loads(request.body.decode('utf-8'))
-
     id = data.get('id', None)
-
     old_markup = Markup.objects.get(pk=id)
     old_markup.delete()
-
-    return JsonResponse({'result': True}, safe=False)
+    return Response({'result': True})
 
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))
 def createTextEntity(request):
-     
     data = json.loads(request.body.decode('utf-8'))
     pos_start = data.get('pos_start', None)
     pos_end = data.get('pos_end', None)
@@ -167,19 +98,16 @@ def createTextEntity(request):
     
     new_entity = Entity(pos_end=pos_end, pos_start=pos_start, node_uri=node_uri, markup=markup)
     new_entity.save()
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
+    ontoRep = OntologyRepo()
     result = model_to_dict(new_entity)
-    result['node'] = o.nodeToDict(o.getEntityByUri(new_entity.node_uri))
-
-    o.close()
-
+    result['node'] = ontoRep.getItemsByUris([node_uri])[0]
 
     return JsonResponse(result, safe=False)
 
 @api_view(['GET', ])
 @permission_classes((AllowAny,))
 def getTextEntities(request):
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
+    ontoRep = OntologyRepo()
 
     markup_id = request.GET.get('markup_id', None)
     result = []
@@ -188,59 +116,27 @@ def getTextEntities(request):
     entities = Entity.objects.all().filter(markup__pk=markup_id)
     for e in entities:
         nodes_uris_dict[e.node_uri] = 1
-    nodes = o.getNodesByUrisInDict(getList(nodes_uris_dict))
+    nodes = ontoRep.getItemsByUris(getList(nodes_uris_dict))
+    
+    nodes_dict = {}
+    for n in nodes:
+        nodes_dict[n['data']['uri']] = n
 
     for e in entities:
         temp = model_to_dict(e)
-        temp['node'] = o.nodeToDict(nodes[e.node_uri])
+        temp['node'] = nodes_dict[e.node_uri]
         result.append(temp)
 
-    o.close()
-
-    return JsonResponse(result, safe=False)
+    return Response(result)
 
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))
 def deleteTextEntity(request):
-    user = request.user
-
     data = json.loads(request.body.decode('utf-8'))
-
     id = data.get('id', None)
-
     old_entity = Entity.objects.get(pk=id)
     old_entity.delete()
-
-    return JsonResponse({'result': True}, safe=False)
-
-
-@api_view(['GET', ])
-@permission_classes((AllowAny,))
-def getNodeAttributes(request):
-    o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
-    node_uri = request.GET.get('node_uri', None)
-    class_node, attributes, attributes_obj = o.getClassAttributes(node_uri) 
-
-    
-    attributes_dict = []
-    attributes_obj_dict = []
-    class_node_dict = o.nodeToDict(class_node)
-
-    for at in attributes:
-        attributes_dict.append(o.nodeToDict(at))
-    for at in attributes_obj:
-        attributes_obj_dict.append(o.nodeToDict(at))
-
-    result = {
-        "class_node": class_node_dict,
-        "attributes": attributes_dict,
-        "attributes_obj": attributes_obj_dict,
-    }
-
-    o.close()
-
-
-    return JsonResponse(result, safe=False)
+    return Response({'result': True})
 
 # relations
 

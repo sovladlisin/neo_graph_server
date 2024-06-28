@@ -3,10 +3,11 @@ from  neo4j import time
 import uuid
 import json 
 from .namespace import *
-from db.models import Resource
+from db.models import Resource, Entity
 import base64
 from io import StringIO, BytesIO
 from PIL import Image
+
 
 class NeoRepo:
 
@@ -395,7 +396,10 @@ class NeoRepo:
             temp = {}
             temp['id'] = r.id
             temp['url'] = r.source.url
-            temp['file_object'] = self.transformFileToBase64(r.source)
+            if r.resource_type not in ['mp4', 'pdf', 'mp3', 'avi', 'mov']:
+                temp['file_object'] = self.transformFileToBase64(r.source)
+            else:
+                temp['file_object'] = ''
             temp['name'] = r.name
             temp['resource_type'] = r.resource_type
             temp['file_uri'] = r.file_uri
@@ -407,12 +411,28 @@ class NeoRepo:
             temp = {}
             temp['id'] = r.id
             temp['url'] = r.source.url
-            temp['file_object'] = self.transformFileToBase64(r.source)
+            if r.resource_type not in ['mp4', 'pdf', 'mp3', 'avi', 'mov']:
+                temp['file_object'] = self.transformFileToBase64(r.source)
+            else:
+                temp['file_object'] = ''
             temp['name'] = r.name
             temp['resource_type'] = r.resource_type
             temp['file_uri'] = r.file_uri
             temp['ontology_uri'] = r.ontology_uri
             data['connected_file'] = temp
+
+        data['text_mentions'] = []
+        for e in Entity.objects.all().filter(node_uri=node.get('uri')):
+            temp = {}
+            temp['pos_start'] = e.pos_start
+            temp['pos_end'] = e.pos_end
+            temp['markup'] = e.markup.id
+            temp['original_object_uri'] = e.markup.original_object_uri
+
+
+            a = data['text_mentions']
+            a.append(temp)
+            data['text_mentions'] = a
 
        
 
@@ -436,7 +456,7 @@ class NeoRepo:
             return None
 
         result = {
-            'id': node.element_id,
+            'id': node.id,
             'source': str(node.start_node['uri']),
             'target': str(node.end_node['uri']),
             'type': 'mainEdge',
@@ -444,7 +464,7 @@ class NeoRepo:
         }
 
         data = {}
-        data['id'] = node.element_id
+        data['id'] = node.id
         data['uri'] = node.type
         data['labels'] = [node.type]
         data['params'] = list(node.keys())
@@ -462,13 +482,13 @@ class NeoRepo:
         if source_file.name is not None and len(source_file.name) != 0:
             content_file = source_file.read()
             stream = BytesIO(content_file)
-            image = Image.open(stream)
-            img_byte_arr = BytesIO()
-            image.save(img_byte_arr, format='WEBP')
+            # image = Image.open(stream)
+            # img_byte_arr = BytesIO()
+            # image.save(img_byte_arr, format='WEBP')
 
-            img_str = base64.b64encode(img_byte_arr.getvalue())
+            img_str = base64.b64encode(stream.getvalue())
 
-            result = 'data:image/'+'PNG' + ';base64,' + img_str.decode("utf-8")
+            result =  img_str.decode("utf-8")
             return result
         return ''
     
