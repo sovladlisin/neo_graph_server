@@ -530,7 +530,6 @@ class NeoRepo:
         if len(props) == 0:
             return ''
         data = "{"
-        # print(props)
         for p in props:
             temp = "`{p}`".format(p=p)
             temp +=':'

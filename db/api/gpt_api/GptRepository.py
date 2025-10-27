@@ -13,9 +13,9 @@ from db.api.ontology.namespace import *
 
 class GptRepository():
     def __init__(self):
-        key_id = 'ajeh46rg7s9ss5cj8ico'
-        key = 'AQVN0SG3A_E84Vk0SZjDfgLS_8TSE-KpIfG_Zk-o'
-        folder_id = 'b1gmd3fh2g2nrfo251cr'
+        key_id = ''
+        key = ''
+        folder_id = ''
 
         headers = {
             'Authorization': 'Api-Key ' + key,
