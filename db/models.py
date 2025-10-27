@@ -95,3 +95,6 @@ class TextRelation(models.Model):
         Entity, blank=False, null=True, related_name='connection_entity', on_delete=models.CASCADE)
     markup = models.ForeignKey(
         Markup, blank=False, null=True, related_name='relation_markup', on_delete=models.CASCADE)
+    
+
+    

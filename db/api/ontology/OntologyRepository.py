@@ -6,6 +6,8 @@ import pprint
 from .namespace import *
 import pprint
 from db.models import Resource
+import random
+
 class OntologyRepo:
 
     def __init__(self, ontology_uri = None):
@@ -366,26 +368,83 @@ class OntologyRepo:
             object_class_name = object_classes[0]['data'].get('params_values',{}).get(LABEL, ['1','1'])[0].split('@')[0]
 
             attributes = self.nr.collect_signatures_datatype_custom(uri=object_class_uri)
+
             obj_attributes = self.nr.collect_signatures_object_custom(uri=object_class_uri)
+            obj_attributes_dict = {}
+            
+            for o_a in obj_attributes:
+                key = o_a['field']['data']['uri']
+                obj_attributes_dict[key] = o_a
+
+
+
+
+            # print('\n\n\n','obj_attributes')
+            # pprint.pprint(obj_attributes)
+            # print('\n\n\n')
+
 
             if len(obj_attributes):
                 att_uris = []
                 for obj_att in obj_attributes:
                     att_uri = obj_att['field']['data']['uri']
                     att_uris.append(att_uri)
-                obj_rels = self.nr.get_node_with_arcs_by_arcs(uri=uri,arcs_labels=att_uris)
+
+
+                obj_rels = []
+                for u in att_uris:
+                    obj_rels += self.nr.get_node_with_arcs_by_arcs(uri=uri,arcs_labels=[u])
+
+                print('\n\n\n','obj_rels')
+                pprint.pprint(len(obj_rels))
+                print('\n\n\n')
 
 
                 new_obj_attributes = []
-                for o in obj_attributes:
-                    for v in obj_rels:
+
+                empty_obj_attributes_uris = []
+
+
+                # obj_rels real connections
+                for v in obj_rels:
+                    temp = {}
+
+                    start_node = v['data']['start_node']
+                    end_node = v['data']['end_node']
+                    placed = start_node if start_node['data']['uri'] != uri else end_node
+                    temp['value'] = placed
+                    temp['relation'] = v
+                    temp['id'] = v.get('id', '-1')
+
+                    for o in obj_attributes:
                         if o['field']['data']['uri'] == v['data']['uri']:
-                            start_node = v['data']['start_node']
-                            end_node = v['data']['end_node']
-                            placed = start_node if start_node['data']['uri'] != uri else end_node
-                            o['value'] = placed
-                            o['relation'] = v
-                    new_obj_attributes.append(o)         
+
+                            obj_attributes_dict[o['field']['data']['uri']] = None
+
+                            temp['field'] = o['field']
+                            temp['range'] = o['range']
+                            temp['direction'] = o['direction']
+
+                    new_obj_attributes.append(temp) 
+
+                for key in obj_attributes_dict:
+                    o = obj_attributes_dict.get(key, None)
+                    if o:
+                        print('VALUEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE','\n\n')
+                        pprint.pprint(o)
+                        temp = {}
+                        temp['value'] = None
+                        temp['relation'] = None
+
+                        rn = str(random.randrange(1,1000000))
+                        temp['id'] = rn
+
+                        temp['field'] = o['field']
+                        temp['range'] = o['range']
+                        temp['direction'] = o['direction']
+                        new_obj_attributes.append(temp) 
+
+
                 obj_attributes = new_obj_attributes
         
         node['data']['obj_class_name'] = object_class_name
@@ -457,7 +516,7 @@ class OntologyRepo:
                 field = p.get('field', None)
                 if value is not None:
                     if p['direction'] == 1:
-                        if 'relation' in p:
+                        if p.get('relation',None):
                             self.nr.delete_relation(p['relation']['id'])
                         rel = self.nr.create_relation(from_uri=uri, to_uri=value['data']['uri'], labels=[field['data']['uri']])
                         result_arcs.append(rel)

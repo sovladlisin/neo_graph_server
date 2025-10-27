@@ -263,13 +263,12 @@ class ProjectsRepo:
             o = OntologyRepo(o_uri)
             result_nodes, r_arcs, result_arc_names = o.getFullOntology()
             for ran in result_arc_names:
-                source_arc_names[ran.get('data',{}).get('uri',-1)] = ran.get('data',{}).get('params_values',{}).get(LABEL, '2')
-
+                source_arc_names[ran.get('data', {}).get('uri', '')]= ran.get('data',{}).get('params_values',{}).get(LABEL, ['1','1'])[0].split('@')[0]
+            print(source_arc_names)
             for node in result_nodes:
                 ontology_uri = node.get('data',{}).get('ontology_uri', '')
                 node_uri = node.get('data',{}).get('uri', '')
-                o_r = OntologyRepo(ontology_uri)
-                node_full = o_r.collectEntity(node_uri)
+                node_full = o.collectEntity(node_uri)
 
                 attributes_names = node_full.get('data',{}).get('attributes', [])
 
@@ -288,7 +287,7 @@ class ProjectsRepo:
                 if type_string != '':
                     name = node.get('data',{}).get('params_values',{}).get(LABEL, ['',''])[0].split('@')[0]
                     description = node.get('data',{}).get('params_values',{}).get(COMMENT, '')
-
+                    attributes = node.get('attributes', [])
                     if object_class_name_string: # этот параметр в collect_entity только у объектов
                         node_text = object_class_name_string + ' ' + name + '\n' # Первая строка (название и принадлежность)
                     else:
@@ -303,20 +302,21 @@ class ProjectsRepo:
                     for attr_key in node.get('data',{}).get('params_values',{}).keys():
                         attr_text = ''
                         if attr_key != 'file' and attr_key != 'uri' and attr_key not in [LABEL, COMMENT]:
-                            attr_text = self.getNodeNameByUri(attributes_names, attr_key) 
+                            attr_text = self.getNodeNameByUri(attributes, attr_key)
                             attr_text += ': ' + node.get('data',{}).get('params_values',{}).get(attr_key, '')
                         
                         if attr_text != '':
                             node_text += attr_text + ' \n'
 
                     node['full_text'] = node_text
+                    print(node['data']['uri'], node_text)
                     source_nodes.append(node)
         
         
 
 
         gr = GptRepository()
-        gr.create_embedding(project_embedding,source_nodes)
+        # gr.create_embedding(project_embedding,source_nodes)
 
 
         return True
