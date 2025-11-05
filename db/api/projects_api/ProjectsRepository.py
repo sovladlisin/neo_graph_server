@@ -5,11 +5,18 @@ import json
 from db.api.ontology.namespace import *
 import time
 import requests
+from user_auth.models import Account
 
 class ProjectsRepo:
 
-    def __init__(self):
-        self.projects = Project.objects.all()
+    def __init__(self, account: Account):
+        self.account = account
+
+        if account.is_admin:
+            self.projects = Project.objects.all()
+        else:
+            self.projects = Project.objects.all().filter(account__pk = account.pk)
+            
         pass
 
     def collect_project(self, project):
@@ -21,7 +28,7 @@ class ProjectsRepo:
         ontologies_uris = json.loads(project.ontologies_uris)
         res_ontologies_uris = project.res_ontologies_uris
 
-        onto_rep = OntologyRepo(ontology_uri='')
+        onto_rep = OntologyRepo(self.account, ontology_uri='')
 
         ontologies_nodes = []
         for uri in ontologies_uris:
@@ -49,13 +56,13 @@ class ProjectsRepo:
         
         if len(project.res_selected_classes_uris) > 0 and len(res_selected_classes_uris) != 0:
             res_ontology_uri = project.res_ontologies_uris
-            o = OntologyRepo(res_ontology_uri)
+            o = OntologyRepo(self.account, res_ontology_uri)
             resource_gallery_items = o.getItemsByUris(res_selected_classes_uris)
             o.close()   
 
         if len(project.res_ontologies_uris) > 0 and len(res_star_classes_uris) != 0:
             res_ontology_uri = project.res_ontologies_uris
-            o = OntologyRepo(res_ontology_uri)
+            o = OntologyRepo(self.account, res_ontology_uri)
             resource_star_items = o.getItemsByUris(res_star_classes_uris)
             o.close()
 
@@ -68,10 +75,11 @@ class ProjectsRepo:
         return [self.collect_project(pr) for pr in self.projects]
     
     def getProject(self,id):
+        print('GET_PROJECT', id)
         return self.collect_project(self.projects.filter(pk = id).first())
     
     def createProject(self, name,ontologies_uris, res_ontologies_uris):
-        project = Project(name=name,ontologies_uris=json.dumps(ontologies_uris), res_ontologies_uris=res_ontologies_uris)
+        project = Project(name=name,ontologies_uris=json.dumps(ontologies_uris), res_ontologies_uris=res_ontologies_uris, account = self.account)
         project.save()
         return self.collect_project(project)
     
@@ -163,7 +171,7 @@ class ProjectsRepo:
             return temp
         
 
-        onto = OntologyRepo(ontology_uri=ontology_uri)
+        onto = OntologyRepo(self.account, ontology_uri=ontology_uri)
         nodes = onto.getClassObjects(class_uri=class_uri)
         temp['data_nodes']['nodes'] = nodes
 
@@ -260,7 +268,7 @@ class ProjectsRepo:
         source_nodes = []
         source_arc_names = {}
         for o_uri in ontologies_uris:
-            o = OntologyRepo(o_uri)
+            o = OntologyRepo(self.account, o_uri)
             result_nodes, r_arcs, result_arc_names = o.getFullOntology()
             for ran in result_arc_names:
                 source_arc_names[ran.get('data', {}).get('uri', '')]= ran.get('data',{}).get('params_values',{}).get(LABEL, ['1','1'])[0].split('@')[0]

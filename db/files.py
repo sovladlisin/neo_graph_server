@@ -60,7 +60,7 @@ def uploadFile(request):
 
 
 @api_view(['DELETE', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def deleteFile(request):
     id = request.GET.get('id',None)
     if id is None:

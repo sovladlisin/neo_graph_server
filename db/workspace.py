@@ -22,9 +22,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 
 
 @api_view(['GET', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def getMarkups(request):
-    ontoRep = OntologyRepo()
+    ontoRep = OntologyRepo(request.user)
 
     original_object_uri = request.GET.get('original_object_uri', None)
     result = []
@@ -46,7 +46,7 @@ def addMarkup(request):
     original_object_uri = data.get('original_object_uri', '')
     ontology_uri = data.get('ontology_uri', '')
 
-    ontoRep = OntologyRepo(ontology_uri)
+    ontoRep = OntologyRepo(request.user, ontology_uri)
 
     new_markup = Markup(name=name, original_object_uri=original_object_uri, ontology_uri=ontology_uri, account=user)
     new_markup.save()
@@ -59,7 +59,7 @@ def addMarkup(request):
 @api_view(['POST', ])
 @permission_classes((IsAuthenticated,))
 def editMarkup(request):
-    ontoRep = OntologyRepo()
+    ontoRep = OntologyRepo(request.user)
 
     data = json.loads(request.body.decode('utf-8'))
 
@@ -98,16 +98,16 @@ def createTextEntity(request):
     
     new_entity = Entity(pos_end=pos_end, pos_start=pos_start, node_uri=node_uri, markup=markup)
     new_entity.save()
-    ontoRep = OntologyRepo()
+    ontoRep = OntologyRepo(request.user)
     result = model_to_dict(new_entity)
     result['node'] = ontoRep.getItemsByUris([node_uri])[0]
 
     return JsonResponse(result, safe=False)
 
 @api_view(['GET', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def getTextEntities(request):
-    ontoRep = OntologyRepo()
+    ontoRep = OntologyRepo(request.user)
 
     markup_id = request.GET.get('markup_id', None)
     result = []
@@ -163,7 +163,7 @@ def createTextRelation(request):
 
 
 @api_view(['GET', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def getTextRelations(request):
     o = Onthology(DB_URI,DB_USER, DB_PASSWORD)
 

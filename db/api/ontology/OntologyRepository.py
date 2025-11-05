@@ -7,11 +7,12 @@ from .namespace import *
 import pprint
 from db.models import Resource
 import random
+from user_auth.models import Account
 
 class OntologyRepo:
 
-    def __init__(self, ontology_uri = None):
-
+    def __init__(self, account: Account, ontology_uri = None):
+        self.account = account
         self.nr = NeoRepo(DB_URI,DB_USER, DB_PASSWORD, ontology_uri)
         self.ontology_uri = ontology_uri
 
@@ -75,13 +76,31 @@ class OntologyRepo:
 
 
     def getOntologies(self):
-        return self.nr.get_nodes_by_labels(['Ontology'])
+        data = self.nr.get_nodes_by_labels(['Ontology'])
+        result = []
+        for i in data:
+            if self.account.is_admin or i['data']['params_values'].get(ONTOLOGY_OWNER, -1) == self.account.vk_id:
+                result.append(i)
+        return result
     
     def getResourceOntologies(self):
-        return self.nr.get_nodes_by_labels(['ResourceOntology'])
+        data = self.nr.get_nodes_by_labels(['ResourceOntology'])
+        result = []
+        for i in data:
+            if self.account.is_admin or i['data']['params_values'].get(ONTOLOGY_OWNER, -1) == self.account.vk_id:
+                result.append(i)
+            else:
+                if i['data']['uri'] == 'http://erlangen-crm.org/mainResource/8675f5a4-f1ef-4630-b0c2-47d2ec2a021f':
+                    result.append(i)
+        return result
     
     def getPatternOntologies(self):
-        return self.nr.get_nodes_by_labels(['Pattern'])
+        data =  self.nr.get_nodes_by_labels(['Pattern'])
+        result = []
+        for i in data:
+            if self.account.is_admin or i['data']['params_values'].get(ONTOLOGY_OWNER, -1) == self.account.vk_id:
+                result.append(i)
+        return result
 
     def getRandomUri(self):
         return self.ontology_uri + '/' +  str(uuid.uuid4())
@@ -93,6 +112,8 @@ class OntologyRepo:
         params[COMMENT]= comment
         params[URI]= self.ontology_uri
         params[ONTOLOGY_SIGNATURE] = [self.ontology_uri]
+        params[ONTOLOGY_OWNER] = self.account.vk_id
+
         
         ontology_node = self.nr.create_node(labels=labels,props=params)
         return ontology_node
@@ -105,6 +126,8 @@ class OntologyRepo:
         params[LABEL]= title
         params[COMMENT]= comment
         params[URI]= new_ontology_uri
+        params[ONTOLOGY_OWNER] = self.account.vk_id
+
 
         signature = self.signature
         signature.append(new_ontology_uri)
@@ -119,6 +142,7 @@ class OntologyRepo:
         params = {}
         params[LABEL]= title
         params[COMMENT]= comment
+        params[ONTOLOGY_OWNER] = self.account.vk_id
         params[URI]= self.ontology_uri
         
         ontology_node = self.nr.create_node(labels=labels,props=params)
@@ -130,6 +154,8 @@ class OntologyRepo:
         params[LABEL]= title
         params[COMMENT]= comment
         params[URI]= self.ontology_uri
+        params[ONTOLOGY_OWNER] = self.account.vk_id
+
         
         ontology_node = self.nr.create_node(labels=labels,props=params)
         return ontology_node
@@ -140,6 +166,8 @@ class OntologyRepo:
         params[LABEL]= title
         params[COMMENT]= comment
         params[URI]= self.ontology_uri
+        params[ONTOLOGY_OWNER] = self.account.vk_id
+
         
         ontology_node = self.nr.create_node(labels=labels,props=params)
         return ontology_node

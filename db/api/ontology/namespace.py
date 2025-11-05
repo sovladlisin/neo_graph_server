@@ -18,3 +18,6 @@ MAIN_RESOURCE = 'http://erlangen-crm.org/mainResource'
 MAIN_PATTERN = 'http://erlangen-crm.org/mainPattern'
 MAIN_ONTOLOGY = 'http://erlangen-crm.org/mainOntology'
 
+ONTOLOGY_OWNER = 'http://erlangen-crm.org/ontologyOwner'
+
+

@@ -17,7 +17,7 @@ from core.settings import *
 # API IMPORTS
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAuthenticated
 
 from db.api.ontology.OntologyRepository import OntologyRepo
 
@@ -25,10 +25,10 @@ from db.models import Resource
 from db.files import collect_file
 
 @api_view(['GET', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def getGraph(request):
     uri = request.GET.get('uri', '')
-    o = OntologyRepo(uri)
+    o = OntologyRepo(request.user, uri)
     result_nodes, result_arcs, arc_names = o.getFullOntology()
     o.close()
 
@@ -40,7 +40,7 @@ def getGraph(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def createClass(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -49,7 +49,7 @@ def createClass(request):
     comment = data.get('comment', '')
     parent_uri = data.get('parent_uri', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
     result_nodes, result_arcs = o.createClass(title, comment, parent_uri)
     o.close()
 
@@ -60,7 +60,7 @@ def createClass(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def updateClass(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -69,7 +69,7 @@ def updateClass(request):
     params = data.get('params', {})
     attributes = data.get('params', [])
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
     result_nodes, result_arcs = o.updateClass(uri=uri, params=params, attributes=attributes)
     o.close()
 
@@ -80,7 +80,7 @@ def updateClass(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def createObject(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -89,7 +89,7 @@ def createObject(request):
     comment = data.get('comment', '')
     class_uri = data.get('class_uri', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
     result_nodes, result_arcs = o.createObject(title, comment, class_uri)
     o.close()
 
@@ -100,13 +100,13 @@ def createObject(request):
     return Response(result)
 
 @api_view(['DELETE', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def deleteEntity(request):
 
     ontology_uri = request.GET.get('ontology_uri', None)
     uri = request.GET.get('uri', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
     result_nodes_uris = o.deleteEntity(uri)
     o.close()
 
@@ -117,13 +117,13 @@ def deleteEntity(request):
     return Response(result)
 
 @api_view(['DELETE', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def deleteRelation(request):
 
     ontology_uri = request.GET.get('ontology_uri', None)
     id = request.GET.get('id', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
     result_arcs_id = o.deleteRel(id)
     o.close()
 
@@ -135,13 +135,13 @@ def deleteRelation(request):
 
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def applyPattern(request):
     data = json.loads(request.body.decode('utf-8'))
 
     pattern = data.get('pattern', None)
 
-    o = OntologyRepo(pattern.get('ontology_uri',None))
+    o = OntologyRepo(request.user, pattern.get('ontology_uri',None))
     result_nodes, result_arcs = o.apply_pattern(pattern)
     o.close()
 
@@ -153,31 +153,31 @@ def applyPattern(request):
 
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def collectPatterns(request):
     data = json.loads(request.body.decode('utf-8'))
 
     patterns = data.get('patterns', None)
     
-    o = OntologyRepo(patterns[0].get('ontology_uri',None))
+    o = OntologyRepo(request.user, patterns[0].get('ontology_uri',None))
 
     result = o.collectPatternsTarget(patterns)
 
     return Response(result)
 
 @api_view(['GET', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def getClassObjects(request):
     ontology_uri = request.GET.get('ontology_uri', None)
     class_uri = request.GET.get('class_uri', None)
 
-    o = OntologyRepo(ontology_uri=ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri=ontology_uri)
     result = o.getClassObjects(class_uri=class_uri)
 
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def addClassAttribute(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -185,7 +185,7 @@ def addClassAttribute(request):
     uri = data.get('uri', None)
     label = data.get('label', None)
     
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
 
     result_nodes, result_arcs = o.addClassAtribute(uri=uri, label=label)
 
@@ -196,7 +196,7 @@ def addClassAttribute(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def addClassObjectAttribute(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -205,7 +205,7 @@ def addClassObjectAttribute(request):
     label = data.get('label', None)
     range_uri = data.get('range_uri', None)
     
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
 
     result_nodes, result_arcs = o.addClassObjectAtribute(uri=uri, label=label,range_uri=range_uri)
 
@@ -216,7 +216,7 @@ def addClassObjectAttribute(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def updateEntity(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -225,7 +225,7 @@ def updateEntity(request):
     params = data.get('params', None)
     obj_params = data.get('obj_params', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
 
     result_nodes, result_arcs = o.updateEntity(uri=uri,params=params,obj_params=obj_params)
 
@@ -236,14 +236,14 @@ def updateEntity(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def applyOntologyPattern(request):
     data = json.loads(request.body.decode('utf-8'))
 
     origin_ontology_uri = data.get('origin_ontology_uri', None)
     ontology_uri = data.get('ontology_uri', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
 
     result_nodes, result_arcs, arc_names = o.copyOntology(origin_ontology_uri=origin_ontology_uri)
     o.close()
@@ -257,7 +257,7 @@ def applyOntologyPattern(request):
 
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def updateEntityFile(request):
     data = json.loads(request.body.decode('utf-8'))
     ontology_uri = data.get('ontology_uri', None)
@@ -269,7 +269,7 @@ def updateEntityFile(request):
 
     
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
 
     node = o.nr.get_node_by_uri(uri)
     prev_file_url = node.get('data',{}).get('params_values',{}).get(property_uri,'')
@@ -303,7 +303,7 @@ def updateEntityFile(request):
     return Response(result)
 
 @api_view(['POST', ])
-@permission_classes((AllowAny,))
+@permission_classes((IsAuthenticated,))
 def createRelation(request):
     data = json.loads(request.body.decode('utf-8'))
 
@@ -311,7 +311,7 @@ def createRelation(request):
     target = data.get('target', None)
     ontology_uri = data.get('ontology_uri', None)
 
-    o = OntologyRepo(ontology_uri)
+    o = OntologyRepo(request.user, ontology_uri)
 
     rel = o.createRelation(source=source, target=target)
     o.close()
